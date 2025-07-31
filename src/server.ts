@@ -5,18 +5,22 @@ import { startImapSync } from './services/imapService';
 
 const startServer = async () => {
   try {
-    // Initialize Elasticsearch index
+    console.log('🧠 Initializing Elasticsearch...');
     await initializeElasticsearch();
 
-    // Start Express server
+    console.log('🚀 Starting Express server...');
     app.listen(config.port, () => {
-      console.log(`🚀 Server is running on http://localhost:${config.port}`);
+      console.log(`✅ Server is running at http://localhost:${config.port}`);
     });
 
-    // Start IMAP sync for all accounts
+    console.log('📩 Starting IMAP sync...');
     await startImapSync();
-  } catch (err) {
-    console.error('❌ Server failed to start:', err);
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      console.error('❌ Server failed to start:', err.message);
+    } else {
+      console.error('❌ Server failed to start:', err);
+    }
     process.exit(1);
   }
 };

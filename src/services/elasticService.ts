@@ -6,32 +6,36 @@ const esClient = new Client({ node: config.elasticUrl });
 const initializeElasticsearch = async () => {
   const indexName = 'emails';
 
-  // Check if the index already exists
-  const { body: exists } = await esClient.indices.exists({ index: indexName });
-  if (!exists) {
-    // Create index
-    await esClient.indices.create({ index: indexName });
+  try {
+    const exists = await esClient.indices.exists({ index: indexName });
 
-    // Define mapping
-    await esClient.indices.putMapping({
-      index: indexName,
-      body: {
-        properties: {
-          from: { type: 'keyword' },
-          to: { type: 'keyword' },
-          subject: { type: 'text' },
-          body: { type: 'text' },
-          timestamp: { type: 'date' } // also recommended
-        }
-      }
-    });
+    if (!exists.body) {
+      // Create index with initial mapping
+      await esClient.indices.create({
+        index: indexName,
+        body: {
+          mappings: {
+            properties: {
+              from: { type: 'keyword' },
+              to: { type: 'keyword' },
+              subject: { type: 'text' },
+              body: { type: 'text' },
+              timestamp: { type: 'date' },
+              folder: { type: 'keyword' },
+              account: { type: 'keyword' },
+              category: { type: 'keyword' },
+            },
+          },
+        },
+      });
 
-    console.log(`Created and mapped index: ${indexName}`);
-  } else {
-    console.log(`Elasticsearch index "${indexName}" already exists.`);
+      console.log(`✅ Created and mapped index: ${indexName}`);
+    } else {
+      console.log(`ℹ️ Elasticsearch index "${indexName}" already exists.`);
+    }
+  } catch (err) {
+    console.error('❌ Elasticsearch initialization error:', err);
   }
 };
 
-export  { esClient, initializeElasticsearch };
-
-
+export { esClient, initializeElasticsearch };

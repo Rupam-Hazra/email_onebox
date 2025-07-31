@@ -4,11 +4,9 @@ import { categorizeEmail } from '../services/emailCategorizer';
 import { Email } from '../models/email';
 import { sendSlackNotification, sendExternalWebhook } from '../services/notificationService';
 
-
 const INDEX_NAME = 'emails';
 
-//Create and index a new email with AI categorization
- 
+// Create and index a new email with AI categorization
 export const createEmail = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { from, to, subject, body } = req.body;
@@ -20,7 +18,7 @@ export const createEmail = async (req: Request, res: Response, next: NextFunctio
     const emailContent = `From: ${from}\nTo: ${to}\nSubject: ${subject}\nBody:\n${body}`;
     const label = await categorizeEmail(emailContent);
 
-    //  Notify if label is "Interested"
+    // Notify if label is "Interested"
     if (label.toLowerCase() === 'interested') {
       await sendSlackNotification({ from, to, subject, body });
       await sendExternalWebhook({ from, to, subject, body, category: label });
@@ -32,28 +30,27 @@ export const createEmail = async (req: Request, res: Response, next: NextFunctio
       subject,
       body,
       timestamp: new Date().toISOString(),
-      category: label
+      category: label,
     };
 
     const response = await esClient.index({
       index: INDEX_NAME,
-      body: email
+      body: email,
     });
 
     res.status(201).json({
       message: 'Email indexed with category',
       id: response.body._id,
-      category: label
+      category: label,
     });
 
   } catch (error) {
+    console.error('Create Email Error:', error);
     next(error);
   }
 };
 
-//Search emails by query string (across subject, body, from, to)
-// Optional: filter by category, from, or to using query params
- 
+// Search emails by query string (optional: filter by category, from, or to)
 export const searchEmails = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const query = req.query.q || '';
@@ -68,7 +65,7 @@ export const searchEmails = async (req: Request, res: Response, next: NextFuncti
         multi_match: {
           query: query,
           fields: ['subject', 'body', 'from', 'to'],
-        }
+        },
       });
     }
 
@@ -88,24 +85,23 @@ export const searchEmails = async (req: Request, res: Response, next: NextFuncti
       index: INDEX_NAME,
       body: {
         query: {
-          bool: {
-            must
-          }
-        }
-      }
+          bool: { must }
+        },
+      },
     });
 
     const emails = result.body.hits.hits.map((hit: any) => ({
       id: hit._id,
-      ...hit._source
+      ...hit._source,
     }));
 
     res.status(200).json({
       count: emails.length,
-      emails
+      emails,
     });
 
   } catch (error) {
+    console.error('Search Email Error:', error);
     next(error);
   }
 };

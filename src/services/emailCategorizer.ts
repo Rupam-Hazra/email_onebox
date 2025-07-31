@@ -1,4 +1,4 @@
-import openai from './openaiService';
+import axios from 'axios';
 
 const systemPrompt = `
 You are an AI that categorizes email leads into the following types:
@@ -12,15 +12,22 @@ Respond with only one of the above labels. No explanation.
 `;
 
 export const categorizeEmail = async (emailContent: string): Promise<string> => {
-  const chatCompletion = await openai.chat.completions.create({
-    model: 'gpt-3.5-turbo',
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: emailContent }
-    ],
-    temperature: 0.2
-  });
+  const prompt = `${systemPrompt}\n\nEmail:\n${emailContent}\n\nLabel:`;
 
-  const response = chatCompletion.choices[0]?.message?.content?.trim();
-  return response || 'Unknown';
+  try {
+    const response = await axios.post('http://localhost:11434/api/generate', {
+      model: 'mistral', // or llama3, whichever you're using
+      prompt,
+      stream: false,
+    });
+
+    const label = response.data.response.trim();
+
+    // Normalize output
+    const allowedLabels = ['Interested', 'Meeting Booked', 'Not Interested', 'Spam', 'Out of Office'];
+    return allowedLabels.includes(label) ? label : 'Unknown';
+  } catch (error: any) {
+    console.error('Failed to categorize email:', error.message);
+    return 'Unknown';
+  }
 };
